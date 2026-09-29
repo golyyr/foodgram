@@ -85,26 +85,17 @@ class RecipeMinifiedSerializer(serializers.ModelSerializer):
 
 class UserWithRecipesSerializer(UserSerializer):
     recipes = serializers.SerializerMethodField()
-    recipes_count = serializers.SerializerMethodField()
+    recipes_count = serializers.ReadOnlyField(source='recipes.count')
 
     class Meta(UserSerializer.Meta):
         fields = [*UserSerializer.Meta.fields, 'recipes', 'recipes_count']
         read_only_fields = fields
 
-    def get_recipes_count(self, author):
-        return author.recipes.count()
-
     def get_recipes(self, author):
-        request = self.context.get('request')
-        recipes = author.recipes.all()
-        if request is not None:
-            raw_limit = request.GET.get('recipes_limit')
-            try:
-                recipes = recipes[:int(raw_limit)]
-            except (TypeError, ValueError):
-                pass
         return RecipeMinifiedSerializer(
-            recipes,
+            author.recipes.all()[:int(
+                self.context['request'].GET.get('recipes_limit', 10**10),
+            )],
             many=True,
             context=self.context,
         ).data
@@ -199,7 +190,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         }
         if duplicates:
             raise serializers.ValidationError(
-                UNIQUE_ITEMS_ERROR.format(items=sorted(duplicates)),
+                UNIQUE_ITEMS_ERROR.format(items=duplicates),
             )
         return items
 

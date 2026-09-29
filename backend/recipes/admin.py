@@ -1,9 +1,6 @@
-from functools import wraps
-
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from django.db.models import Max, Min
-from django.utils.safestring import mark_safe as mark_safe_value
+from django.utils.safestring import mark_safe
 
 from .models import (
     Favorite,
@@ -15,16 +12,6 @@ from .models import (
     Tag,
     User,
 )
-
-
-def mark_safe(method):
-    """Декоратор: помечает HTML-результат метода как безопасный."""
-
-    @wraps(method)
-    def wrapper(*args, **kwargs):
-        return mark_safe_value(method(*args, **kwargs))
-
-    return wrapper
 
 
 class RecipesCountMixin:
@@ -49,17 +36,20 @@ class BooleanPresenceFilter(admin.SimpleListFilter):
     title = ''
     parameter_name = ''
     lookups_choices = ()
-    yes_filter = {}
-    no_filter = {}
+    related_field = ''
 
     def lookups(self, request, model_admin):
         return self.lookups_choices
 
     def queryset(self, request, queryset):
         if self.value() == 'yes':
-            return queryset.filter(**self.yes_filter).distinct()
+            return queryset.filter(
+                **{f'{self.related_field}__isnull': False},
+            ).distinct()
         if self.value() == 'no':
-            return queryset.filter(**self.no_filter)
+            return queryset.filter(
+                **{f'{self.related_field}__isnull': True},
+            )
         return queryset
 
 
@@ -70,8 +60,7 @@ class HasRecipesFilter(BooleanPresenceFilter):
         ('yes', 'Есть в рецептах'),
         ('no', 'Нет в рецептах'),
     )
-    yes_filter = {'product_amounts__isnull': False}
-    no_filter = {'product_amounts__isnull': True}
+    related_field = 'product_amounts'
 
 
 class UserHasRecipesFilter(BooleanPresenceFilter):
@@ -81,8 +70,7 @@ class UserHasRecipesFilter(BooleanPresenceFilter):
         ('yes', 'Есть рецепты'),
         ('no', 'Нет рецептов'),
     )
-    yes_filter = {'recipes__isnull': False}
-    no_filter = {'recipes__isnull': True}
+    related_field = 'recipes'
 
 
 class UserHasSubscriptionsFilter(BooleanPresenceFilter):
@@ -92,8 +80,7 @@ class UserHasSubscriptionsFilter(BooleanPresenceFilter):
         ('yes', 'Есть подписки'),
         ('no', 'Нет подписок'),
     )
-    yes_filter = {'subscriptions__isnull': False}
-    no_filter = {'subscriptions__isnull': True}
+    related_field = 'subscriptions'
 
 
 class UserHasSubscribersFilter(BooleanPresenceFilter):
@@ -103,26 +90,29 @@ class UserHasSubscribersFilter(BooleanPresenceFilter):
         ('yes', 'Есть подписчики'),
         ('no', 'Нет подписчиков'),
     )
-    yes_filter = {'author_subscriptions__isnull': False}
-    no_filter = {'author_subscriptions__isnull': True}
+    related_field = 'author_subscriptions'
 
 
 class CookingTimeFilter(admin.SimpleListFilter):
     title = 'время готовки'
     parameter_name = 'cooking_time_bin'
+    ranges = {}
 
     def lookups(self, request, model_admin):
-        times = Recipe.objects.order_by('cooking_time').values_list(
-            'cooking_time',
-            flat=True,
-        ).distinct()
-        count = times.count()
+        times = list(
+            Recipe.objects.order_by('cooking_time').values_list(
+                'cooking_time',
+                flat=True,
+            ).distinct(),
+        )
+        count = len(times)
         if count < 3:
+            self.ranges = {}
             return ()
         first_third = times[count // 3]
         second_third = times[(2 * count) // 3]
-        max_time = Recipe.objects.aggregate(value=Max('cooking_time'))['value']
-        min_time = Recipe.objects.aggregate(value=Min('cooking_time'))['value']
+        min_time = times[0]
+        max_time = times[count - 1]
         self.ranges = {
             'fast': (min_time, first_third),
             'medium': (first_third, second_third),
@@ -158,7 +148,7 @@ class CookingTimeFilter(admin.SimpleListFilter):
         )
 
     def queryset(self, request, recipes):
-        cooking_range = getattr(self, 'ranges', {}).get(self.value())
+        cooking_range = self.ranges.get(self.value())
         if cooking_range is None:
             return recipes
         return recipes.filter(cooking_time__range=cooking_range)

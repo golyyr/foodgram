@@ -1,5 +1,5 @@
 from django.db.models import Exists, OuterRef, Sum
-from django.http import FileResponse, Http404
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from djoser.views import UserViewSet as DjoserUserViewSet
@@ -73,7 +73,7 @@ class UserViewSet(DjoserUserViewSet):
                 self.paginate_queryset(
                     User.objects.filter(
                         author_subscriptions__user=request.user,
-                    ).order_by('-author_subscriptions__id'),
+                    ),
                 ),
                 many=True,
                 context={'request': request},
@@ -170,7 +170,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'], url_path='get-link')
     def get_link(self, request, pk=None):
         if not Recipe.objects.filter(pk=pk).exists():
-            raise Http404(f'Рецепт с id={pk} не найден.')
+            raise ValidationError({
+                'errors': f'Рецепт с id={pk} не найден.',
+            })
         return Response({
             'short-link': request.build_absolute_uri(
                 reverse('short-link', args=[pk]),
@@ -200,7 +202,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def download_shopping_cart(self, request):
-        recipes = Recipe.objects.filter(shoppingcarts__user=request.user)
+        recipes = Recipe.objects.filter(
+            shoppingcarts__user=request.user,
+        ).select_related('author').prefetch_related('tags')
         return FileResponse(
             render_shopping_list(
                 ProductInRecipe.objects.filter(
@@ -219,14 +223,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
         )
 
     def _toggle_relation(self, request, model):
-        recipe = self.get_object()
         if request.method == 'DELETE':
             get_object_or_404(
                 model,
                 user=request.user,
-                recipe=recipe,
+                recipe_id=self.kwargs['pk'],
             ).delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
+        recipe = self.get_object()
         _, created = model.objects.get_or_create(
             user=request.user,
             recipe=recipe,

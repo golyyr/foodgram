@@ -3,9 +3,14 @@
 Сервис для публикации рецептов: пользователи делятся блюдами, подписываются
 друг на друга, собирают избранное и список покупок.
 
-Документация задания: [техническое задание Foodgram](https://github.com/yandex-praktikum/foodgram-project-react/blob/master/README.md).  
-Спецификация API: [OpenAPI-схема](docs/openapi-schema.yml).  
+Документация задания: [Foodgram](https://github.com/yandex-praktikum/foodgram-project-react/blob/master/README.md).  
 После запуска: [документация Redoc](http://localhost/api/docs/).
+
+## Продакшен
+
+- [Сайт](http://158.160.159.158)
+- [Админка](http://158.160.159.158/admin/)
+- [Документация API](http://158.160.159.158/api/docs/)
 
 ## Технологический стек
 
@@ -51,8 +56,6 @@ docker compose exec backend python manage.py import_tags
 docker compose exec backend python manage.py import_products --fixture /app/data/ingredients.json
 docker compose exec backend python manage.py import_tags --fixture /app/data/tags.json
 ```
-
-Фикстуры: [products JSON](data/ingredients.json), [tags JSON](data/tags.json).
 
 Создание суперпользователя:
 
@@ -104,7 +107,8 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
-API будет доступен по адресу [http://127.0.0.1:8000](http://127.0.0.1:8000).
+API будет доступен по адресу [http://127.0.0.1:8000](http://127.0.0.1:8000).  
+Админка: [http://127.0.0.1:8000/admin/](http://127.0.0.1:8000/admin/).
 
 5. Собрать фронтенд (в другом терминале):
 
@@ -126,6 +130,6 @@ npm run build
 
 ## Автор
 
-Антон Субботин — [golyyr](https://github.com/golyyr)
-Почта: subbotin_antoshka@mail.ru
+Антон Субботин — [golyyr](https://github.com/golyyr)  
+Почта: [subbotin_antoshka@mail.ru](mailto:subbotin_antoshka@mail.ru)  
 Telegram: [@lieutenant_priboy](https://t.me/lieutenant_priboy)
