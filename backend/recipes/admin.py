@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from django.utils.safestring import mark_safe
+from django.contrib.auth.models import Group
+from django.utils.html import format_html, format_html_join
 
 from .models import (
     Favorite,
@@ -12,6 +13,9 @@ from .models import (
     Tag,
     User,
 )
+
+if admin.site.is_registered(Group):
+    admin.site.unregister(Group)
 
 
 class RecipesCountMixin:
@@ -99,10 +103,12 @@ class CookingTimeFilter(admin.SimpleListFilter):
     ranges = {}
 
     def lookups(self, request, model_admin):
-        times = Recipe.objects.order_by('cooking_time').values_list(
-            'cooking_time',
-            flat=True,
-        ).distinct()
+        times = tuple(
+            Recipe.objects.order_by('cooking_time').values_list(
+                'cooking_time',
+                flat=True,
+            ).distinct(),
+        )
         count = len(times)
         if count < 3:
             return ()
@@ -216,25 +222,36 @@ class RecipeAdmin(admin.ModelAdmin):
         return recipe.favorites.count()
 
     @admin.display(description='Продукты')
-    @mark_safe
     def products_list(self, recipe):
-        return '<br>'.join(
-            f'{item.product.name} ({item.amount} '
-            f'{item.product.measurement_unit})'
-            for item in recipe.product_amounts.select_related('product')
+        return format_html_join(
+            '<br>',
+            '{} ({} {})',
+            (
+                (
+                    item.product.name,
+                    item.amount,
+                    item.product.measurement_unit,
+                )
+                for item in recipe.product_amounts.select_related('product')
+            ),
         )
 
     @admin.display(description='Теги')
-    @mark_safe
     def tags_list(self, recipe):
-        return '<br>'.join(tag.name for tag in recipe.tags.all())
+        return format_html_join(
+            '<br>',
+            '{}',
+            ((tag.name,) for tag in recipe.tags.all()),
+        )
 
     @admin.display(description='Картинка')
-    @mark_safe
     def image_preview(self, recipe):
         if not recipe.image:
             return ''
-        return f'<img src="{recipe.image.url}" width="80" height="50">'
+        return format_html(
+            '<img src="{}" width="80" height="50">',
+            recipe.image.url,
+        )
 
 
 @admin.register(ProductInRecipe)
@@ -271,19 +288,23 @@ class UserAdmin(RecipesCountMixin, BaseUserAdmin):
         UserHasSubscribersFilter,
     )
     ordering = ('username',)
-    readonly_fields = ('date_joined', 'last_login')
+    filter_horizontal = ()
+    readonly_fields = ('date_joined', 'last_login', 'avatar_preview')
     fieldsets = (
         (None, {'fields': ('email', 'username', 'password')}),
         ('Личные данные', {
-            'fields': ('first_name', 'last_name', 'avatar'),
+            'fields': (
+                'first_name',
+                'last_name',
+                'avatar',
+                'avatar_preview',
+            ),
         }),
         ('Права', {
             'fields': (
                 'is_active',
                 'is_staff',
                 'is_superuser',
-                'groups',
-                'user_permissions',
             ),
         }),
         ('Даты', {'fields': ('last_login', 'date_joined')}),
@@ -307,12 +328,14 @@ class UserAdmin(RecipesCountMixin, BaseUserAdmin):
         return user.get_full_name()
 
     @admin.display(description='Аватар')
-    @mark_safe
     def avatar_preview(self, user):
         if not user.avatar:
-            return ''
-        return f'<img src="{user.avatar.url}" width="40" height="40">'
-
+            return '—'
+        return format_html(
+            '<img src="{}" width="40" height="40" '
+            'style="object-fit: cover; border-radius: 50%;">',
+            user.avatar.url,
+        )
     @admin.display(description='Подписок')
     def subscriptions_count(self, user):
         return user.subscriptions.count()

@@ -4,6 +4,7 @@ infra/frontend/build
 key.txt
 infra/ssl/*.crt
 infra/ssl/*.key
+infra/certbot/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

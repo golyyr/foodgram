@@ -2,5 +2,5 @@ login: admin@foodgram.ru
 password: Adminpass123
 vm_name: r-backend-vm-1570452340
 repo_owner: golyyr
-foodgram_domain: https://158.160.159.158
+foodgram_domain: https://158-160-159-158.nip.io
 dockerhub_username: golyyr
