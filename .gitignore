@@ -2,6 +2,8 @@ frontend/node_modules
 infra/frontend/build
 .env
 key.txt
+infra/ssl/*.crt
+infra/ssl/*.key
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

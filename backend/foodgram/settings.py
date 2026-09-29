@@ -135,3 +135,4 @@ DJOSER = {
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DOMAIN = os.getenv('DOMAIN', 'localhost')
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

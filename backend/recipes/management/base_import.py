@@ -20,17 +20,15 @@ class ImportJsonCommand(BaseCommand):
     def handle(self, *args, **options):
         path = Path(options['fixture'])
         try:
-            before = self.model.objects.count()
             with path.open(encoding='utf-8') as json_file:
-                self.model.objects.bulk_create(
+                created = self.model.objects.bulk_create(
                     (self.model(**item) for item in json.load(json_file)),
                     ignore_conflicts=True,
                 )
-            added = self.model.objects.count() - before
             self.stdout.write(
                 self.style.SUCCESS(
                     f'Данные загружены из {path.name}. '
-                    f'Добавлено: {added}. '
+                    f'Добавлено: {len(created)}. '
                     f'Всего записей: {self.model.objects.count()}.',
                 ),
             )

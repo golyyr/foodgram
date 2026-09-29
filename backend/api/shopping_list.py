@@ -1,27 +1,29 @@
 from django.template import Context, Engine
 from django.utils import timezone
 
-SHOPPING_LIST_TEMPLATE = (
-    'Список покупок\n'
-    'Дата составления: {{ date }}\n'
-    '{% if products %}\n'
-    '  {% for product in products %}\n'
-    '{{ forloop.counter }}. '
-    '{{ product.product__name|capfirst }} '
-    '({{ product.product__measurement_unit }}) — {{ product.total }}\n'
-    '  {% endfor %}\n'
-    '{% endif %}\n'
-    '{% if recipes %}\n'
-    'Рецепты:\n'
-    '  {% for recipe in recipes %}\n'
-    '{{ forloop.counter }}. {{ recipe.name }} '
-    '(@{{ recipe.author.username }}) '
-    '[{% for tag in recipe.tags.all %}'
-    '{{ tag.name }}{% if not forloop.last %}, {% endif %}'
-    '{% endfor %}]\n'
-    '  {% endfor %}\n'
-    '{% endif %}\n'
-)
+SHOPPING_LIST_TEMPLATE = """
+Список покупок
+Дата составления: {{ date }}
+{% if products %}
+  {% for product in products %}
+    {% with name=product.product__name %}
+      {% with unit=product.product__measurement_unit %}
+{{ forloop.counter }}. {{ name|capfirst }} ({{ unit }}) — {{ product.total }}
+      {% endwith %}
+    {% endwith %}
+  {% endfor %}
+{% endif %}
+{% if recipes %}
+Рецепты:
+  {% for recipe in recipes %}
+    {% with author=recipe.author.username %}
+{{ forloop.counter }}. {{ recipe.name }} (@{{ author }}) [{% spaceless %}
+{% for tag in recipe.tags.all %}{{ tag.name }}{% if not forloop.last
+%}, {% endif %}{% endfor %}{% endspaceless %}]
+    {% endwith %}
+  {% endfor %}
+{% endif %}
+"""
 
 
 def render_shopping_list(products, recipes):
