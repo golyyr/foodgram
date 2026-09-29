@@ -233,7 +233,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         recipe = self.get_object()
         _, created = model.objects.get_or_create(
             user=request.user,
-            recipe=recipe,
+            recipe_id=self.kwargs['pk'],
         )
         if not created:
             raise ValidationError({

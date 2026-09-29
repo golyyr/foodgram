@@ -124,8 +124,8 @@ npm run build
 собирает образ backend, публикует его в Docker Hub как
 `<user>/foodgram_backend:latest` и обновляет контейнеры на сервере.
 
-В секретах репозитория должны быть `DOCKER_USERNAME`, `DOCKER_PASSWORD` и
-`SSH_PRIVATE_KEY`.
+В [секретах](https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions)
+репозитория должны быть `DOCKER_USERNAME`, `DOCKER_PASSWORD` и `SSH_PRIVATE_KEY`.
 
 
 ## Автор
