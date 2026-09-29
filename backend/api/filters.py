@@ -1,6 +1,6 @@
 from django_filters import rest_framework as filters
 
-from recipes.models import Recipe, Tag
+from recipes.models import Product, Recipe, Tag
 
 
 class RecipeFilter(filters.FilterSet):
@@ -20,29 +20,39 @@ class RecipeFilter(filters.FilterSet):
         model = Recipe
         fields = ('author', 'tags', 'is_favorited', 'is_in_shopping_cart')
 
-    def filter_queryset(self, queryset):
-        return super().filter_queryset(queryset).distinct()
+    def filter_queryset(self, recipes):
+        return super().filter_queryset(recipes).distinct()
 
-    def filter_is_favorited(self, queryset, name, value):
+    def filter_is_favorited(self, recipes, name, value):
         return self._filter_by_user_relation(
-            queryset,
+            recipes,
             value,
             'favorites__user',
         )
 
-    def filter_is_in_shopping_cart(self, queryset, name, value):
+    def filter_is_in_shopping_cart(self, recipes, name, value):
         return self._filter_by_user_relation(
-            queryset,
+            recipes,
             value,
             'shopping_carts__user',
         )
 
-    def _filter_by_user_relation(self, queryset, value, lookup):
-        user = self.request.user
-        if not user.is_authenticated:
+    def _filter_by_user_relation(self, recipes, value, lookup):
+        current_user = self.request.user
+        if not current_user.is_authenticated:
             if value:
-                return queryset.none()
-            return queryset
+                return recipes.none()
+            return recipes
         if value:
-            return queryset.filter(**{lookup: user})
-        return queryset.exclude(**{lookup: user})
+            return recipes.filter(**{lookup: current_user})
+        return recipes.exclude(**{lookup: current_user})
+
+
+class ProductFilter(filters.FilterSet):
+    """Поиск продуктов по началу названия."""
+
+    name = filters.CharFilter(lookup_expr='istartswith')
+
+    class Meta:
+        model = Product
+        fields = ('name',)

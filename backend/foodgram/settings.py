@@ -10,23 +10,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY', 'unsafe-dev-secret-key')
 DEBUG = os.getenv('DEBUG', 'False').lower() in ('1', 'true', 'yes')
 
-ALLOWED_HOSTS = [
-    host.strip()
-    for host in os.getenv(
-        'ALLOWED_HOSTS',
-        'localhost,127.0.0.1,backend',
-    ).split(',')
-    if host.strip()
-]
+ALLOWED_HOSTS = os.getenv(
+    'ALLOWED_HOSTS',
+    'localhost,127.0.0.1,backend',
+).split(',')
 
-CSRF_TRUSTED_ORIGINS = [
-    origin.strip()
-    for origin in os.getenv(
-        'CSRF_TRUSTED_ORIGINS',
-        'http://localhost',
-    ).split(',')
-    if origin.strip()
-]
+CSRF_TRUSTED_ORIGINS = os.getenv(
+    'CSRF_TRUSTED_ORIGINS',
+    'http://localhost',
+).split(',')
+
+USERNAME_PATTERN = r'^[\w.@+-]+\Z'
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -39,7 +33,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'django_filters',
     'djoser',
-    'users.apps.UsersConfig',
+    'api.apps.ApiConfig',
     'recipes.apps.RecipesConfig',
 ]
 
@@ -83,7 +77,7 @@ DATABASES = {
     },
 }
 
-AUTH_USER_MODEL = 'users.User'
+AUTH_USER_MODEL = 'recipes.User'
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -136,8 +130,6 @@ DJOSER = {
     'SERIALIZERS': {
         'user': 'api.serializers.UserSerializer',
         'current_user': 'api.serializers.UserSerializer',
-        'user_create': 'api.serializers.UserCreateSerializer',
-        'token_create': 'api.serializers.CustomTokenCreateSerializer',
     },
 }
 

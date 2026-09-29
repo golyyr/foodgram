@@ -1,13 +1,29 @@
 # Foodgram
 
-Сервис публикации рецептов. Фронтенд отдаёт nginx, API и админка работают через Gunicorn, данные хранятся в PostgreSQL.
+Сервис для публикации рецептов: пользователи делятся блюдами, подписываются
+друг на друга, собирают избранное и список покупок.
 
-## Запуск
+Документация задания: [техническое задание Foodgram](https://github.com/yandex-praktikum/foodgram-project-react/blob/master/README.md).
+Спецификация API: [OpenAPI-схема](docs/openapi-schema.yml), после запуска —
+[Redoc](http://localhost/api/docs/).
 
-Из каталога `infra`:
+## Технологический стек
+
+- Python 3.11, Django 4.2, Django REST Framework, Djoser, django-filter
+- PostgreSQL 16
+- Gunicorn
+- Docker, Docker Compose
+- Nginx
+- React (готовый фронтенд из прекода)
+- GitHub Actions, Docker Hub
+
+## Запуск в Docker
 
 ```bash
+git clone https://github.com/golyyr/foodgram.git
+cd foodgram/infra
 cp .env.example .env
+# заполните SECRET_KEY, POSTGRES_PASSWORD и при необходимости ALLOWED_HOSTS
 docker compose up -d --build
 ```
 
@@ -15,25 +31,86 @@ docker compose up -d --build
 Документация API: `http://localhost/api/docs/`  
 Админка: `http://localhost/admin/`
 
-Контейнер `frontend` только собирает статику и завершается. В рабочем составе остаются nginx, PostgreSQL и Django + Gunicorn. Статика и медиа раздаются nginx, данные лежат в volumes.
+Контейнер `frontend` только собирает статику и завершается. В рабочем составе
+остаются nginx, PostgreSQL и Django + Gunicorn. Статика и медиа раздаются
+nginx, данные хранятся в volumes.
 
-## Учётные записи
+### Импорт продуктов и тегов
 
-Администратор:
+Команды выполняются автоматически при старте backend. При необходимости
+вручную внутри контейнера:
 
-- почта: `admin@foodgram.ru`
-- пароль: `Adminpass123`
+```bash
+docker compose exec backend python manage.py import_products
+docker compose exec backend python manage.py import_tags
+```
 
-Тестовые пользователи (пароль у всех `Testpass123`):
+Фикстуры: `data/ingredients.json`, `data/tags.json`.
 
-- `vasya@foodgram.ru`
-- `masha@foodgram.ru`
-- `petya@foodgram.ru`
+Создание суперпользователя:
 
-Ингредиенты, теги и рецепты загружаются при старте backend.
+```bash
+docker compose exec backend python manage.py createsuperuser
+```
+
+## Локальный запуск без Docker
+
+Нужны Python 3.11+, PostgreSQL и Node.js для сборки фронтенда.
+
+1. Клонировать репозиторий и перейти в него:
+
+```bash
+git clone https://github.com/golyyr/foodgram.git
+cd foodgram
+```
+
+2. Создать и активировать виртуальное окружение, установить зависимости:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r backend/requirements.txt
+```
+
+3. Создать базу PostgreSQL и переменные окружения (или `.env` в `backend/`):
+
+```bash
+export POSTGRES_DB=foodgram
+export POSTGRES_USER=foodgram
+export POSTGRES_PASSWORD=foodgram
+export DB_HOST=localhost
+export DB_PORT=5432
+export SECRET_KEY=dev-secret
+export DEBUG=True
+export ALLOWED_HOSTS=localhost,127.0.0.1
+export CSRF_TRUSTED_ORIGINS=http://localhost:8000
+```
+
+4. Применить миграции и импортировать фикстуры:
+
+```bash
+cd backend
+python manage.py migrate
+python manage.py import_products
+python manage.py import_tags
+python manage.py createsuperuser
+python manage.py runserver
+```
+
+5. Собрать фронтенд (в другом терминале) и отдать его через nginx или
+`serve`, либо открывать API отдельно на `http://127.0.0.1:8000`.
+
+```bash
+cd frontend
+npm install
+npm run build
+```
 
 ## CI/CD
 
-При пуше в `main` workflow `.github/workflows/foodgram.yml` собирает образ backend, публикует его в Docker Hub как `<user>/foodgram_backend:latest` и обновляет контейнеры на сервере.
+При пуше в `main` workflow `.github/workflows/foodgram.yml` собирает образ
+backend, публикует его в Docker Hub как `<user>/foodgram_backend:latest` и
+обновляет контейнеры на сервере.
 
-В секретах репозитория должны быть `DOCKER_USERNAME`, `DOCKER_PASSWORD` и `SSH_PRIVATE_KEY`.
+В секретах репозитория должны быть `DOCKER_USERNAME`, `DOCKER_PASSWORD` и
+`SSH_PRIVATE_KEY`.

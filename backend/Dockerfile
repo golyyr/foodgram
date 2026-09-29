@@ -9,7 +9,8 @@ COPY backend/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY backend/ /app/
-COPY data/ingredients.csv /app/data/ingredients.csv
+COPY data/ingredients.json /app/data/ingredients.json
+COPY data/tags.json /app/data/tags.json
 
 RUN sed -i 's/\r$//' /app/entrypoint.sh \
     && chmod +x /app/entrypoint.sh

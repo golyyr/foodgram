@@ -28,5 +28,6 @@ PY
 
 python manage.py migrate --noinput
 python manage.py collectstatic --noinput
-python manage.py load_initial_data
+python manage.py import_products
+python manage.py import_tags
 exec "$@"
