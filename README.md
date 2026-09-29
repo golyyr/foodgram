@@ -3,9 +3,9 @@
 Сервис для публикации рецептов: пользователи делятся блюдами, подписываются
 друг на друга, собирают избранное и список покупок.
 
-Документация задания: [техническое задание Foodgram](https://github.com/yandex-praktikum/foodgram-project-react/blob/master/README.md).
-Спецификация API: [OpenAPI-схема](docs/openapi-schema.yml), после запуска —
-[Redoc](http://localhost/api/docs/).
+Документация задания: [техническое задание Foodgram](https://github.com/yandex-praktikum/foodgram-project-react/blob/master/README.md).  
+Спецификация API: [OpenAPI-схема](docs/openapi-schema.yml).  
+После запуска: [документация Redoc](http://localhost/api/docs/).
 
 ## Технологический стек
 
@@ -27,9 +27,9 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-Сайт: `http://localhost`  
-Документация API: `http://localhost/api/docs/`  
-Админка: `http://localhost/admin/`
+- [Сайт](http://localhost)
+- [Документация API](http://localhost/api/docs/)
+- [Админка](http://localhost/admin/)
 
 Контейнер `frontend` только собирает статику и завершается. В рабочем составе
 остаются nginx, PostgreSQL и Django + Gunicorn. Статика и медиа раздаются
@@ -45,7 +45,14 @@ docker compose exec backend python manage.py import_products
 docker compose exec backend python manage.py import_tags
 ```
 
-Фикстуры: `data/ingredients.json`, `data/tags.json`.
+Можно указать свой путь к фикстуре:
+
+```bash
+docker compose exec backend python manage.py import_products --fixture /app/data/ingredients.json
+docker compose exec backend python manage.py import_tags --fixture /app/data/tags.json
+```
+
+Фикстуры: [products JSON](data/ingredients.json), [tags JSON](data/tags.json).
 
 Создание суперпользователя:
 
@@ -91,14 +98,15 @@ export CSRF_TRUSTED_ORIGINS=http://localhost:8000
 ```bash
 cd backend
 python manage.py migrate
-python manage.py import_products
-python manage.py import_tags
+python manage.py import_products --fixture ../data/ingredients.json
+python manage.py import_tags --fixture ../data/tags.json
 python manage.py createsuperuser
 python manage.py runserver
 ```
 
-5. Собрать фронтенд (в другом терминале) и отдать его через nginx или
-`serve`, либо открывать API отдельно на `http://127.0.0.1:8000`.
+API будет доступен по адресу [http://127.0.0.1:8000](http://127.0.0.1:8000).
+
+5. Собрать фронтенд (в другом терминале):
 
 ```bash
 cd frontend
@@ -108,9 +116,16 @@ npm run build
 
 ## CI/CD
 
-При пуше в `main` workflow `.github/workflows/foodgram.yml` собирает образ
-backend, публикует его в Docker Hub как `<user>/foodgram_backend:latest` и
-обновляет контейнеры на сервере.
+При пуше в `main` workflow [`.github/workflows/foodgram.yml`](.github/workflows/foodgram.yml)
+собирает образ backend, публикует его в Docker Hub как
+`<user>/foodgram_backend:latest` и обновляет контейнеры на сервере.
 
 В секретах репозитория должны быть `DOCKER_USERNAME`, `DOCKER_PASSWORD` и
 `SSH_PRIVATE_KEY`.
+
+
+## Автор
+
+Антон Субботин — [golyyr](https://github.com/golyyr)
+Почта: subbotin_antoshka@mail.ru
+Telegram: [@lieutenant_priboy](https://t.me/lieutenant_priboy)

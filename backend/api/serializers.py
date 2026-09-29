@@ -13,12 +13,13 @@ from recipes.models import (
     User,
 )
 
+UNIQUE_ITEMS_ERROR = 'Элементы не должны повторяться: {items}.'
+
 
 class UserSerializer(DjoserUserSerializer):
     """Пользователь в ответах API."""
 
     is_subscribed = serializers.SerializerMethodField()
-    avatar = serializers.ImageField(read_only=True)
 
     class Meta(DjoserUserSerializer.Meta):
         fields = [
@@ -49,14 +50,12 @@ class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
         fields = ('id', 'name', 'slug')
-        read_only_fields = fields
 
 
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = ('id', 'name', 'measurement_unit')
-        read_only_fields = fields
 
 
 class ProductInRecipeSerializer(serializers.ModelSerializer):
@@ -86,11 +85,14 @@ class RecipeMinifiedSerializer(serializers.ModelSerializer):
 
 class UserWithRecipesSerializer(UserSerializer):
     recipes = serializers.SerializerMethodField()
-    recipes_count = serializers.IntegerField(read_only=True)
+    recipes_count = serializers.SerializerMethodField()
 
     class Meta(UserSerializer.Meta):
         fields = [*UserSerializer.Meta.fields, 'recipes', 'recipes_count']
         read_only_fields = fields
+
+    def get_recipes_count(self, author):
+        return author.recipes.count()
 
     def get_recipes(self, author):
         request = self.context.get('request')
@@ -178,15 +180,10 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         return self._validate_unique(
             ingredients,
             key=lambda item: item['id'],
-            message='Продукты не должны повторяться: {items}.',
         )
 
     def validate_tags(self, tags):
-        return self._validate_unique(
-            tags,
-            key=lambda tag: tag,
-            message='Теги не должны повторяться: {items}.',
-        )
+        return self._validate_unique(tags, key=lambda tag: tag)
 
     def validate(self, data):
         if self.instance is None and not data.get('image'):
@@ -195,14 +192,14 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
             )
         return data
 
-    def _validate_unique(self, items, key, message):
+    def _validate_unique(self, items, key):
         values = [key(item) for item in items]
         duplicates = {
             str(value) for value in values if values.count(value) > 1
         }
         if duplicates:
             raise serializers.ValidationError(
-                message.format(items=', '.join(sorted(duplicates))),
+                UNIQUE_ITEMS_ERROR.format(items=sorted(duplicates)),
             )
         return items
 
@@ -216,13 +213,10 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         return recipe
 
     def update(self, recipe, validated_data):
-        products = validated_data.pop('ingredients')
-        tags = validated_data.pop('tags')
-        recipe = super().update(recipe, validated_data)
-        recipe.tags.set(tags)
+        recipe.tags.set(validated_data.pop('tags'))
         recipe.product_amounts.all().delete()
-        self._set_products(recipe, products)
-        return recipe
+        self._set_products(recipe, validated_data.pop('ingredients'))
+        return super().update(recipe, validated_data)
 
     def _set_products(self, recipe, products):
         ProductInRecipe.objects.bulk_create(

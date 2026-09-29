@@ -34,7 +34,7 @@ class RecipeFilter(filters.FilterSet):
         return self._filter_by_user_relation(
             recipes,
             value,
-            'shopping_carts__user',
+            'shoppingcarts__user',
         )
 
     def _filter_by_user_relation(self, recipes, value, lookup):

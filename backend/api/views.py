@@ -1,4 +1,4 @@
-from django.db.models import Count, Exists, OuterRef, Sum
+from django.db.models import Exists, OuterRef, Sum
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
@@ -72,10 +72,8 @@ class UserViewSet(DjoserUserViewSet):
             UserWithRecipesSerializer(
                 self.paginate_queryset(
                     User.objects.filter(
-                        subscribers__user=request.user,
-                    ).annotate(
-                        recipes_count=Count('recipes'),
-                    ).order_by('-subscribers__id'),
+                        author_subscriptions__user=request.user,
+                    ).order_by('-author_subscriptions__id'),
                 ),
                 many=True,
                 context={'request': request},
@@ -95,10 +93,7 @@ class UserViewSet(DjoserUserViewSet):
                 author_id=id,
             ).delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
-        author = get_object_or_404(
-            User.objects.annotate(recipes_count=Count('recipes')),
-            pk=id,
-        )
+        author = self.get_object()
         if request.user == author:
             raise ValidationError(
                 {'errors': 'Нельзя подписаться на самого себя.'},
@@ -175,7 +170,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'], url_path='get-link')
     def get_link(self, request, pk=None):
         if not Recipe.objects.filter(pk=pk).exists():
-            raise Http404
+            raise Http404(f'Рецепт с id={pk} не найден.')
         return Response({
             'short-link': request.build_absolute_uri(
                 reverse('short-link', args=[pk]),
@@ -188,7 +183,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def favorite(self, request, pk=None):
-        return self._toggle_relation(request, Favorite, pk)
+        return self._toggle_relation(request, Favorite)
 
     @action(
         detail=True,
@@ -196,7 +191,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def shopping_cart(self, request, pk=None):
-        return self._toggle_relation(request, ShoppingCart, pk)
+        return self._toggle_relation(request, ShoppingCart)
 
     @action(
         detail=False,
@@ -205,41 +200,47 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def download_shopping_cart(self, request):
+        recipes = Recipe.objects.filter(shoppingcarts__user=request.user)
         return FileResponse(
             render_shopping_list(
                 ProductInRecipe.objects.filter(
-                    recipe__shopping_carts__user=request.user,
+                    recipe__shoppingcarts__user=request.user,
                 ).values(
                     'product__name',
                     'product__measurement_unit',
                 ).annotate(
                     total=Sum('amount'),
                 ).order_by('product__name'),
+                recipes,
             ),
             as_attachment=True,
             filename='shopping-list.txt',
             content_type='text/plain',
         )
 
-    def _toggle_relation(self, request, model, recipe_id):
+    def _toggle_relation(self, request, model):
+        recipe = self.get_object()
         if request.method == 'DELETE':
             get_object_or_404(
                 model,
                 user=request.user,
-                recipe_id=recipe_id,
+                recipe=recipe,
             ).delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         _, created = model.objects.get_or_create(
             user=request.user,
-            recipe_id=recipe_id,
+            recipe=recipe,
         )
         if not created:
             raise ValidationError({
-                'errors': f'Рецепт уже добавлен в {model._meta.verbose_name}.',
+                'errors': (
+                    f'Рецепт «{recipe.name}» уже добавлен '
+                    f'в {model._meta.verbose_name}.'
+                ),
             })
         return Response(
             RecipeMinifiedSerializer(
-                get_object_or_404(Recipe, pk=recipe_id),
+                recipe,
                 context={'request': request},
             ).data,
             status=status.HTTP_201_CREATED,

@@ -3,7 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models
 
-from recipes.constants import (
+from .constants import (
     MAX_MEASUREMENT_UNIT_LENGTH,
     MAX_PRODUCT_NAME_LENGTH,
     MAX_RECIPE_NAME_LENGTH,
@@ -66,7 +66,7 @@ class Subscription(models.Model):
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='subscribers',
+        related_name='author_subscriptions',
         verbose_name='Автор',
     )
 
@@ -222,6 +222,7 @@ class UserRecipeRelation(models.Model):
 
     class Meta:
         abstract = True
+        default_related_name = '%(class)ss'
         constraints = [
             models.UniqueConstraint(
                 fields=('user', 'recipe'),
@@ -239,7 +240,6 @@ class Favorite(UserRecipeRelation):
     class Meta(UserRecipeRelation.Meta):
         verbose_name = 'Избранное'
         verbose_name_plural = 'Избранное'
-        default_related_name = 'favorites'
 
 
 class ShoppingCart(UserRecipeRelation):
@@ -248,4 +248,3 @@ class ShoppingCart(UserRecipeRelation):
     class Meta(UserRecipeRelation.Meta):
         verbose_name = 'Список покупок'
         verbose_name_plural = 'Списки покупок'
-        default_related_name = 'shopping_carts'
