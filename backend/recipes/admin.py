@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group
 from django.utils.html import format_html, format_html_join
+from django.utils.safestring import mark_safe
 
 from .models import (
     Favorite,
@@ -224,7 +225,7 @@ class RecipeAdmin(admin.ModelAdmin):
     @admin.display(description='Продукты')
     def products_list(self, recipe):
         return format_html_join(
-            '<br>',
+            mark_safe('<br>'),
             '{} ({} {})',
             (
                 (
@@ -239,7 +240,7 @@ class RecipeAdmin(admin.ModelAdmin):
     @admin.display(description='Теги')
     def tags_list(self, recipe):
         return format_html_join(
-            '<br>',
+            mark_safe('<br>'),
             '{}',
             ((tag.name,) for tag in recipe.tags.all()),
         )
