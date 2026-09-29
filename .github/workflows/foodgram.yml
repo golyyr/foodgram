@@ -65,4 +65,5 @@ jobs:
             sudo docker compose build frontend
             sudo docker compose pull backend
             sudo docker compose up -d --no-build
+            sudo docker compose restart nginx
             sudo docker image prune -f
