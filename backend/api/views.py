@@ -1,5 +1,5 @@
 from django.db.models import Exists, OuterRef, Sum
-from django.http import HttpResponse
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from djoser.views import UserViewSet as DjoserUserViewSet
@@ -202,28 +202,24 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def download_shopping_cart(self, request):
-        recipes = Recipe.objects.filter(
-            shoppingcarts__user=request.user,
-        ).select_related('author').prefetch_related('tags')
-        content = render_shopping_list(
-            ProductInRecipe.objects.filter(
-                recipe__shoppingcarts__user=request.user,
-            ).values(
-                'product__name',
-                'product__measurement_unit',
-            ).annotate(
-                total=Sum('amount'),
-            ).order_by('product__name'),
-            recipes,
+        return FileResponse(
+            render_shopping_list(
+                ProductInRecipe.objects.filter(
+                    recipe__shoppingcarts__user=request.user,
+                ).values(
+                    'product__name',
+                    'product__measurement_unit',
+                ).annotate(
+                    total=Sum('amount'),
+                ).order_by('product__name'),
+                Recipe.objects.filter(
+                    shoppingcarts__user=request.user,
+                ).select_related('author').prefetch_related('tags'),
+            ),
+            as_attachment=True,
+            filename='shopping-list.txt',
+            content_type='text/plain',
         )
-        response = HttpResponse(
-            content,
-            content_type='text/plain; charset=utf-8',
-        )
-        response['Content-Disposition'] = (
-            'attachment; filename="shopping-list.txt"'
-        )
-        return response
 
     def _toggle_relation(self, request, model):
         if request.method == 'DELETE':

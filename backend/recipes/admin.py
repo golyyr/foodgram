@@ -1,7 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group
-from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
 
 from .models import (
@@ -104,47 +103,49 @@ class CookingTimeFilter(admin.SimpleListFilter):
     ranges = {}
 
     def lookups(self, request, model_admin):
-        times = tuple(
-            Recipe.objects.order_by('cooking_time').values_list(
-                'cooking_time',
-                flat=True,
-            ).distinct(),
-        )
+        recipes = model_admin.get_queryset(request)
+        times = recipes.order_by('cooking_time').values_list(
+            'cooking_time',
+            flat=True,
+        ).distinct()
         count = len(times)
         if count < 3:
             return ()
         first_third = times[count // 3]
         second_third = times[(2 * count) // 3]
         self.ranges = {
-            'fast': (times[0], first_third),
-            'medium': (first_third, second_third),
-            'slow': (second_third, times[-1]),
+            'fast': {
+                'cooking_time__gte': times[0],
+                'cooking_time__lte': first_third,
+            },
+            'medium': {
+                'cooking_time__gt': first_third,
+                'cooking_time__lte': second_third,
+            },
+            'slow': {
+                'cooking_time__gt': second_third,
+                'cooking_time__lte': times[-1],
+            },
         }
         return (
             (
                 'fast',
                 'быстрее {bound} мин ({count})'.format(
                     bound=first_third,
-                    count=Recipe.objects.filter(
-                        cooking_time__range=self.ranges['fast'],
-                    ).count(),
+                    count=recipes.filter(**self.ranges['fast']).count(),
                 ),
             ),
             (
                 'medium',
                 'быстрее {bound} мин ({count})'.format(
                     bound=second_third,
-                    count=Recipe.objects.filter(
-                        cooking_time__range=self.ranges['medium'],
-                    ).count(),
+                    count=recipes.filter(**self.ranges['medium']).count(),
                 ),
             ),
             (
                 'slow',
                 'долго ({count})'.format(
-                    count=Recipe.objects.filter(
-                        cooking_time__range=self.ranges['slow'],
-                    ).count(),
+                    count=recipes.filter(**self.ranges['slow']).count(),
                 ),
             ),
         )
@@ -153,7 +154,7 @@ class CookingTimeFilter(admin.SimpleListFilter):
         cooking_range = self.ranges.get(self.value())
         if cooking_range is None:
             return recipes
-        return recipes.filter(cooking_time__range=cooking_range)
+        return recipes.filter(**cooking_range)
 
 
 @admin.register(Tag)
@@ -179,7 +180,7 @@ class RecipeAdmin(admin.ModelAdmin):
     list_display = (
         'id',
         'name',
-        'cooking_time',
+        'cooking_time_display',
         'author_name',
         'favorites_count',
         'products_list',
@@ -196,7 +197,7 @@ class RecipeAdmin(admin.ModelAdmin):
         'products__name',
     )
     list_filter = ('tags', 'author', CookingTimeFilter)
-    readonly_fields = ('favorites_count', 'pub_date')
+    readonly_fields = ('favorites_count', 'pub_date', 'image_preview')
     inlines = (ProductInRecipeInline,)
     filter_horizontal = ('tags',)
     fieldsets = (
@@ -205,7 +206,7 @@ class RecipeAdmin(admin.ModelAdmin):
             'fields': (
                 'author',
                 'name',
-                'image',
+                ('image_preview', 'image'),
                 'text',
                 'cooking_time',
                 'tags',
@@ -216,7 +217,14 @@ class RecipeAdmin(admin.ModelAdmin):
 
     @admin.display(description='Автор')
     def author_name(self, recipe):
-        return recipe.author.get_full_name()
+        return recipe.author.username
+
+    @admin.display(
+        description=mark_safe('Время<br>(мин)'),
+        ordering='cooking_time',
+    )
+    def cooking_time_display(self, recipe):
+        return recipe.cooking_time
 
     @admin.display(description='В избранном')
     def favorites_count(self, recipe):
@@ -224,34 +232,27 @@ class RecipeAdmin(admin.ModelAdmin):
 
     @admin.display(description='Продукты')
     def products_list(self, recipe):
-        return format_html_join(
-            mark_safe('<br>'),
-            '{} ({} {})',
-            (
-                (
-                    item.product.name,
-                    item.amount,
-                    item.product.measurement_unit,
-                )
-                for item in recipe.product_amounts.select_related('product')
-            ),
-        )
+        return mark_safe('<br>'.join(
+            '{} ({} {})'.format(
+                item.product.name,
+                item.amount,
+                item.product.measurement_unit,
+            )
+            for item in recipe.product_amounts.select_related('product')
+        ))
 
     @admin.display(description='Теги')
     def tags_list(self, recipe):
-        return format_html_join(
-            mark_safe('<br>'),
-            '{}',
-            ((tag.name,) for tag in recipe.tags.all()),
-        )
+        return mark_safe('<br>'.join(
+            tag.name for tag in recipe.tags.all()
+        ))
 
     @admin.display(description='Картинка')
     def image_preview(self, recipe):
         if not recipe.image:
             return ''
-        return format_html(
-            '<img src="{}" width="80" height="50">',
-            recipe.image.url,
+        return mark_safe(
+            '<img src="{}" width="80" height="50">'.format(recipe.image.url),
         )
 
 
@@ -332,10 +333,11 @@ class UserAdmin(RecipesCountMixin, BaseUserAdmin):
     def avatar_preview(self, user):
         if not user.avatar:
             return '—'
-        return format_html(
+        return mark_safe(
             '<img src="{}" width="40" height="40" '
-            'style="object-fit: cover; border-radius: 50%;">',
-            user.avatar.url,
+            'style="object-fit: cover; border-radius: 50%;">'.format(
+                user.avatar.url,
+            ),
         )
 
     @admin.display(description='Подписок')
