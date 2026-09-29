@@ -1,0 +1,13 @@
+.git
+.github
+frontend
+.venv
+**/.venv
+**/venv
+**/__pycache__
+**/*.pyc
+**/.env
+**/media
+**/static
+**/.idea
+**/.vscode
