@@ -6,18 +6,20 @@ SHOPPING_LIST_TEMPLATE = """
 Дата составления: {{ date }}
 {% if products %}
 {% for product in products %}
-{{ forloop.counter }}. {{ product.product__name|capfirst }} ({% spaceless %}
-{{ product.product__measurement_unit }}
-{% endspaceless %}) — {{ product.total }}
+{% with n=product.product__name %}
+{% with u=product.product__measurement_unit %}
+{{ forloop.counter }}. {{ n|capfirst }} ({{ u }}) — {{ product.total }}
+{% endwith %}
+{% endwith %}
 {% endfor %}
 {% endif %}
 {% if recipes %}
 Рецепты:
 {% for recipe in recipes %}
-{% with author=recipe.author.username %}
-{{ forloop.counter }}. {{ recipe.name }} (@{{ author }}) [{% spaceless %}
-{% for tag in recipe.tags.all %}{{ tag.name }}{% if not forloop.last
-%}, {% endif %}{% endfor %}{% endspaceless %}]
+{% with a=recipe.author.username %}
+{{ forloop.counter }}. {{ recipe.name }} (@{{ a }}) [{% spaceless %}
+{% for t in recipe.tags.all %}{% if not forloop.first %}, {% endif %}
+{{ t.name }}{% endfor %}{% endspaceless %}]
 {% endwith %}
 {% endfor %}
 {% endif %}
