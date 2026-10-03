@@ -337,6 +337,7 @@ class UserAdmin(RecipesCountMixin, BaseUserAdmin):
             'style="object-fit: cover; border-radius: 50%;">',
             user.avatar.url,
         )
+
     @admin.display(description='Подписок')
     def subscriptions_count(self, user):
         return user.subscriptions.count()
