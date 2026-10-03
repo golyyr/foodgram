@@ -104,10 +104,13 @@ class CookingTimeFilter(admin.SimpleListFilter):
 
     def lookups(self, request, model_admin):
         recipes = model_admin.get_queryset(request)
-        times = recipes.order_by('cooking_time').values_list(
-            'cooking_time',
-            flat=True,
-        ).distinct()
+        times = [
+            cooking_time
+            for cooking_time in recipes.order_by('cooking_time').values_list(
+                'cooking_time',
+                flat=True,
+            ).distinct()
+        ]
         count = len(times)
         if count < 3:
             return ()
