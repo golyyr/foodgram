@@ -114,38 +114,35 @@ class CookingTimeFilter(admin.SimpleListFilter):
         first_third = times[count // 3]
         second_third = times[(2 * count) // 3]
         self.ranges = {
-            'fast': {
-                'cooking_time__gte': times[0],
-                'cooking_time__lte': first_third,
-            },
-            'medium': {
-                'cooking_time__gt': first_third,
-                'cooking_time__lte': second_third,
-            },
-            'slow': {
-                'cooking_time__gt': second_third,
-                'cooking_time__lte': times[-1],
-            },
+            'fast': (times[0], first_third),
+            'medium': (first_third, second_third),
+            'slow': (second_third, times[-1]),
         }
         return (
             (
                 'fast',
                 'быстрее {bound} мин ({count})'.format(
                     bound=first_third,
-                    count=recipes.filter(**self.ranges['fast']).count(),
+                    count=recipes.filter(
+                        cooking_time__range=self.ranges['fast'],
+                    ).count(),
                 ),
             ),
             (
                 'medium',
                 'быстрее {bound} мин ({count})'.format(
                     bound=second_third,
-                    count=recipes.filter(**self.ranges['medium']).count(),
+                    count=recipes.filter(
+                        cooking_time__range=self.ranges['medium'],
+                    ).count(),
                 ),
             ),
             (
                 'slow',
                 'долго ({count})'.format(
-                    count=recipes.filter(**self.ranges['slow']).count(),
+                    count=recipes.filter(
+                        cooking_time__range=self.ranges['slow'],
+                    ).count(),
                 ),
             ),
         )
@@ -154,7 +151,7 @@ class CookingTimeFilter(admin.SimpleListFilter):
         cooking_range = self.ranges.get(self.value())
         if cooking_range is None:
             return recipes
-        return recipes.filter(**cooking_range)
+        return recipes.filter(cooking_time__range=cooking_range)
 
 
 @admin.register(Tag)
